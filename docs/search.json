@@ -1,0 +1,9 @@
+[
+  {
+    "objectID": "bwma-avian.html",
+    "href": "bwma-avian.html",
+    "title": "Water Bird Monitoring",
+    "section": "",
+    "text": "Reading layer `subunits' from data source \n  `C:\\Users\\znelson\\Documents\\inyo-gov\\bwma-avian\\data\\subunits.shp' \n  using driver `ESRI Shapefile'\nSimple feature collection with 33 features and 12 fields\nGeometry type: POLYGON\nDimension:     XY\nBounding box:  xmin: -13160660 ymin: 4418236 xmax: -13156370 ymax: 4427451\nProjected CRS: WGS 84 / Pseudo-Mercator\n\n\n\n\n\n\n\n\n\n\nCitationBibTeX citation:@report{2024,\n  author = {},\n  publisher = {Inyo County Water Department},\n  title = {Water {Bird} {Monitoring}},\n  date = {2024-06-07},\n  url = {https://inyo-gov.github.io/bwma-avian/},\n  langid = {en}\n}\nFor attribution, please cite this work as:\n“Water Bird Monitoring.” 2024. LORP. Inyo County\nWater Department. https://inyo-gov.github.io/bwma-avian/."
+  }
+]
