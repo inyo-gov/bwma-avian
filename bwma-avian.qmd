@@ -34,12 +34,16 @@ library(sf)
 library(leaflet)
 library(lubridate)
 library(readr)
-# library(quarto)
+
+# Source the functions script
+source("code/R/functions.R")
+
 knitr::opts_chunk$set(echo = FALSE, 
                       fig.show = "hold", 
                       message = FALSE, 
                       warning = FALSE)
 options(tidyverse.quiet = TRUE)
+
 ```
 
 ```{r}
@@ -53,7 +57,7 @@ sheet23_24_url <- "https://docs.google.com/spreadsheets/d/1hVv2zzw-_MjLFVb1u9aPz
 
 ```
 
-```{r, eval=FALSE}
+```{r}
 
 
 # Read data from Google Sheets
@@ -62,105 +66,38 @@ sheet22_23 <- read_sheet(sheet22_23_url)
 sheet23_24 <- read_sheet(sheet23_24_url)
 ```
 
-```{r, eval=FALSE}
+```{r}
 # Clean column names
-sheet21_22  <- sheet21_22 %>% clean_names()%>% select(date, year, season, unit, subunit, family, species, code, total)
-sheet22_23 <- sheet22_23 %>% clean_names()%>% select(date, year, season, unit, subunit, family, species, code, total)
-sheet23_24 <- sheet23_24 %>% clean_names()%>% select(date, year, season, unit, subunit, family, species, code, total)
-```
+sheet21_22 <- clean_data(sheet21_22)
+sheet22_23 <- clean_data(sheet22_23)
+sheet23_24 <- clean_data(sheet23_24)
 
-```{r, eval=FALSE}
 # Combine the data
 combined_data <- bind_rows(sheet21_22, sheet22_23, sheet23_24)
-```
 
-```{r, eval=FALSE}
-# Create a lookup table for subunits
-lookup_table <- data.frame(
-  entered_subunit = c("TH05", "TH06", "TH07", "TH08", "TH09", "TH10", "W12", "W13", "W14", 
-                      "WAG1", "WAG2", "WAG3", "WAG4", "WAG5", "TH11", "W11", "WAG6", 
-                      "WIN11", "WIN12", "WIN13", "WIN14", "WS1", "WS2", "W7", "W9", 
-                      "TH5", "TH7", "TH8", "TH9", "SW2", "WAG2W", "WIN09", "WAG2w", 
-                      "SW1", "NA", "W09", "TH03", "THxx", "WAG2west", "WAG5west", 
-                      "WAG4west", "WAG6west"),
-  correct_subunit = c("TH5", "TH6", "TH7", "TH8", "TH9", "TH10", "W12", "W13", "W14", 
-                      "WAG1", "WAG2", "WAG3", "WAG4", "WAG5", "TH11", "W11", "WAG6", 
-                      "WIN11", "WIN12", "WIN13", "WIN14", "SW1", "SW2", "W7", "W9", 
-                      "TH5", "TH7", "TH8", "TH9", "SW2", "WAG2", "WIN09", "WAG2", 
-                      "SW1", NA, "W09", "TH3", NA, "WAG2", "WAG5", "WAG4", "WAG6")
-)
-```
+# Create lookup table
+lookup_table <- create_lookup_table()
 
-```{r, eval=FALSE}
-# Replace entered subunits with correct subunits
-combined_data2 <- combined_data %>%
-  left_join(lookup_table, by = c("subunit" = "entered_subunit")) %>%
-  mutate(subunit = ifelse(is.na(correct_subunit), subunit, correct_subunit)) %>%
-  select(-correct_subunit)
-```
+# Correct subunits
+combined_data2 <- correct_subunits(combined_data, lookup_table)
 
+# Add season and month
+combined_data3 <- add_season_and_month(combined_data2)
 
-```{r}
-# local intermediate
-
-# combined_data3 %>% write_csv("data/combined_data3.csv")
-combined_data3 <-  read_csv("data/combined_data3.csv")
-```
-
-```{r, eval=FALSE}
-# Use lubridate to extract month and create a real season variable
-combined_data3 <- combined_data2 %>%
-  mutate(
-    month = month(ymd(date)),
-    real_season = case_when(
-      month %in% c(12, 1, 2) ~ "Winter",
-      month %in% c(3, 4, 5) ~ "Spring",
-      month %in% c(6, 7, 8) ~ "Summer",
-      month %in% c(9, 10, 11) ~ "Fall",
-      TRUE ~ NA_character_
-    )
-  )
-
-```
-
-```{r}
 # Create a survey number and label variable
-combined_data3 <- combined_data3 %>%
-  mutate(survey_number = case_when(
-    real_season == "Fall" & year == 2021 ~ 1,
-    real_season == "Winter" & year == 2021 & month %in% c(12) ~ 2,
-    real_season == "Winter" & year == 2022 & month %in% c(1, 2) ~ 2,
-    real_season == "Spring" & year == 2022 ~ 3,
-    real_season == "Fall" & year == 2022 ~ 4,
-    real_season == "Winter" & year == 2022 & month %in% c(12) ~ 5,
-    real_season == "Winter" & year == 2023 & month %in% c(1, 2) ~ 5,
-    real_season == "Spring" & year == 2023 ~ 6,
-    real_season == "Fall" & year == 2023 ~ 7,
-    real_season == "Winter" & year == 2023 & month %in% c(12) ~ 8,
-    real_season == "Winter" & year == 2024 & month %in% c(1, 2) ~ 8,
-    real_season == "Spring" & year == 2024 ~ 9,
-    TRUE ~ NA_real_
-  ),
-  survey_label = case_when(
-    survey_number == 1 ~ "Fall 2021",
-    survey_number == 2 ~ "Winter 2021-22",
-    survey_number == 3 ~ "Spring 2022",
-    survey_number == 4 ~ "Fall 2022",
-    survey_number == 5 ~ "Winter 2022-23",
-    survey_number == 6 ~ "Spring 2023",
-    survey_number == 7 ~ "Fall 2023",
-    survey_number == 8 ~ "Winter 2023-24",
-    survey_number == 9 ~ "Spring 2024",
-    TRUE ~ NA_character_
-  ))
+combined_data3 <- add_survey_info(combined_data3)
 
-# Process the data: Summarize bird numbers by subbasin and year
-summary_data <- combined_data3 %>%
-  group_by(year, unit, subunit, family, real_season, survey_number, survey_label) %>%
-  summarize(total = sum(total, na.rm = TRUE))
+# Process the data
+summary_data <- process_data(combined_data3)
 
-# Visualize the data: Create a static map (for example purposes)
-# Replace with your spatial data for flooding units
+# Save processed data for local intermediate use
+# combined_data3 %>% write_csv("data/combined_data3.csv")
+# summary_data <- read_csv("data/summary_data.csv")
+
+```
+
+```{r}
+# Read spatial data for flooding units
 flooding_units <- st_read("data/subunits.shp") %>% 
   clean_names() %>% 
   select(subbasin, flood_unit, acres, geometry)
@@ -177,32 +114,14 @@ summary_data_centroids <- flooding_units_centroids %>%
 # Remove rows with NA survey numbers
 summary_data_centroids <- summary_data_centroids %>%
   filter(!is.na(survey_number))
-
 ```
-
 
 ```{r}
 #| column: screen
 #| fig-height: 10
 
 # Plot the map with bird numbers as points at centroids, sized by total bird numbers, colored by family, faceted by survey label
-ggplot(data = summary_data_centroids) +
-  geom_sf(data = flooding_units, fill = "lightgray", color = "white") +  # Background map
-  geom_point(aes(geometry = geometry, size = total, color = family), stat = "sf_coordinates") +
-  facet_wrap(~survey_number+survey_label) +
-  theme_minimal() +
-  labs(title = "Bird Numbers by Survey and Subbasin (2021-2024)",
-       size = "Total Birds",
-       color = "Bird Family") +
-  theme(legend.position = "none",  # Remove the legend
-        axis.title.x = element_blank(),  # Remove x axis label
-        axis.title.y = element_blank(),  # Remove y axis label
-        axis.text = element_blank(),  # Remove axis text
-        axis.ticks = element_blank(),  # Remove axis ticks
-        strip.text = element_text(size = 12))  # Increase facet label size
+plot_bird_data(summary_data_centroids, flooding_units, family_name = "Anatidae", ncol = 5, fig_width = 14, fig_height = 10)
+
 
 ```
-
-
-
-
